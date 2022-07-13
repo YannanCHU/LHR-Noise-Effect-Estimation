@@ -4,8 +4,12 @@ close all;
 addpath("..\..\myFunctions");
 
 % ratio: 1:2200
-% filename = "..\OS_Maps\Heathrow Airport\Harmondsworth_Harlington_Cranford\map_9_1.png";
-filename = "..\..\OS_Maps\Heathrow Airport\Colnbrook Poyle\map_1_2.png";
+% filename = "..\..\OS_Maps\Heathrow Airport\Colnbrook Poyle\map_7_1.png";
+% filename = "..\..\OS_Maps\Heathrow Airport\Datchet\map_6_3.png";
+% filename = "..\..\OS_Maps\Heathrow Airport\Harmondsworth_Harlington_Cranford\map_21_1.png";
+% filename = "..\..\OS_Maps\Heathrow Airport\East Part1\map_8_16.png";
+filename = "..\..\OS_Maps\Manchester Airport\Knutsford\map_1_4.png";
+
 map = imread(filename); map = map(:,:,1:3);
 worldFileName = getworldfilename(filename);
 geoInfOfMap = worldfileread(worldFileName, 'planar', size(map));
@@ -14,11 +18,11 @@ geoInfOfMap = worldfileread(worldFileName, 'planar', size(map));
 peakFFTthreshold_low = 7000;
 peakFFTthreshold_high = [];
 % define the low frequency range
-lowFreThreshold = 2048/45;
+lowFreThreshold = 2048/50;
 highFreThreshold = 2048/15;
 % highFreThreshold = sqrt(sum(size(map).^2));
 % specify the radius of circles in the mask
-maskRadius = 10;
+maskRadius = 7;
 % the standard deviation of the 2D Gaussian kernel
 gauSTD = 2;
 
@@ -181,8 +185,8 @@ for peakPairIndex = 1:ceil(length(XMAX)/2)
     region_candidate_BW = smallRegionRemoval(img_ifft2_bw_morph, 16000);
     region_candidate_BW = smallRegionRemoval(imcomplement(region_candidate_BW), 6000);
     region_candidate_BW = imcomplement(region_candidate_BW);
-%     figure(); imshow(region_candidate_BW); title("After morphological operation"); daspect([1,1,1]);   impixelinfo;
     region_candidate_lb = bwlabel(region_candidate_BW);
+%     figure(); imshow(region_candidate_BW); title("After morphological operation"); daspect([1,1,1]);   impixelinfo;
     subplot(1,3,3);  imagesc(region_candidate_lb); daspect([1,1,1]); title("Labelled Binary Image"); impixelinfo;
     %% postprocessing - check the validity of detected regions
     info = regionprops(region_candidate_lb, 'Area', 'BoundingBox', 'Orientation', 'Centroid');
@@ -241,7 +245,7 @@ invalidFlag = false;
 numOfInvalidRegions = 0;
 
 for peakIndex = 1:length(info)
-% for peakIndex = 15
+% for peakIndex = 1
     boundInfo = info(peakIndex).BoundingBox;
     xrange = round(boundInfo(1)): 1: round(boundInfo(1)+boundInfo(3));
     yrange = round(boundInfo(2)): 1: round(boundInfo(2)+boundInfo(4));
@@ -270,6 +274,7 @@ for peakIndex = 1:length(info)
 
     spatialPeriod_diff = abs(spatialPeriod_2rd - spatialPeriod_1st) / spatialPeriod_1st;
     orientation_diff = abs(mod(orientation_2rd,180) - mod(orientation_1st,180));
+    [MR, ~] = maxRegularity(regionDetected);
 
 %     figure();
 %     imshow(regionDetected);
@@ -278,9 +283,9 @@ for peakIndex = 1:length(info)
 %     scatter(x_index2, y_index2, 'w','filled'); hold off;
 %     fprintf("The first measured spatial period is %2.3f, the second measured spatial period is %2.3f.\n", spatialPeriod_1st, spatialPeriod_2rd);
 %     fprintf("The first measured orientation is %2.3f, the second measured orientation is %2.3f.\n", orientation_1st, orientation_2rd);
+%     fprintf("The measured maximal regularity is %.4f", MR);
     
-    [MR, ~] = maxRegularity(regionDetected);
-    if spatialPeriod_diff >= 0.05 || orientation_diff >= 10 || info(peakIndex).Area <= 50000 || isempty(MR)
+    if spatialPeriod_diff >= 0.05 || orientation_diff >= 10 || info(peakIndex).Area <= 50000 || MR < 0.015
         % set this invalid region as the background of the binary image
         region_candidate_lb(region_candidate_lb == peakIndex) = 0;
         numOfInvalidRegions = numOfInvalidRegions + 1;
